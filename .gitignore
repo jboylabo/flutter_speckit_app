@@ -46,3 +46,7 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# 3D アーニャのアセット (原作の著作物および派生モデル)。
+# 公開リポジトリには含めず、各自 `python3 tool/build_anya_model.py` で生成する。
+/assets/anya/
