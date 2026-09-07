@@ -1,30 +1,92 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+// 操作パネルのウィジェットテスト。
+// 3D ビューア本体は WebView (プラットフォームビュー) を使うためテスト対象から外し、
+// UI のロジックだけを検証する。
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:flutter_speckit_app/main.dart';
+import 'package:flutter_speckit_app/src/widgets/anya_control_panel.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  Widget wrap(Widget child) => MaterialApp(home: Scaffold(body: child));
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  testWidgets('アニメーションが無いときは再生ボタンが無効になる', (tester) async {
+    await tester.pumpWidget(
+      wrap(
+        AnyaControlPanel(
+          animations: const [],
+          selectedAnimation: null,
+          isAnimationPlaying: false,
+          isAutoRotating: false,
+          onAnimationSelected: (_) {},
+          onPlayPausePressed: () {},
+          onStopPressed: () {},
+          onAutoRotateChanged: (_) {},
+          onPresetSelected: (_) {},
+        ),
+      ),
+    );
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+    expect(find.text('アニメーションなし'), findsOneWidget);
+    final playButton = tester.widget<IconButton>(
+      find.ancestor(
+        of: find.byIcon(Icons.play_arrow),
+        matching: find.byType(IconButton),
+      ),
+    );
+    expect(playButton.onPressed, isNull);
+  });
+
+  testWidgets('カメラプリセットを押すとコールバックが呼ばれる', (tester) async {
+    CameraPreset? tapped;
+
+    await tester.pumpWidget(
+      wrap(
+        AnyaControlPanel(
+          animations: const ['Spin', 'Bounce'],
+          selectedAnimation: 'Spin',
+          isAnimationPlaying: false,
+          isAutoRotating: false,
+          onAnimationSelected: (_) {},
+          onPlayPausePressed: () {},
+          onStopPressed: () {},
+          onAutoRotateChanged: (_) {},
+          onPresetSelected: (preset) => tapped = preset,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('俯瞰'));
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(tapped, CameraPreset.overhead);
+  });
+
+  testWidgets('再生中は一時停止アイコンを表示し、自動回転を切り替えられる', (tester) async {
+    bool? autoRotate;
+
+    await tester.pumpWidget(
+      wrap(
+        AnyaControlPanel(
+          animations: const ['Spin', 'Bounce'],
+          selectedAnimation: 'Spin',
+          isAnimationPlaying: true,
+          isAutoRotating: false,
+          onAnimationSelected: (_) {},
+          onPlayPausePressed: () {},
+          onStopPressed: () {},
+          onAutoRotateChanged: (value) => autoRotate = value,
+          onPresetSelected: (_) {},
+        ),
+      ),
+    );
+
+    expect(find.byIcon(Icons.pause), findsOneWidget);
+    expect(find.byIcon(Icons.play_arrow), findsNothing);
+
+    await tester.tap(find.byType(Switch));
+    await tester.pump();
+
+    expect(autoRotate, isTrue);
   });
 }
